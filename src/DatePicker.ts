@@ -246,11 +246,15 @@ export class DatePicker {
     this.inputEl = input
     group.appendChild(input)
 
-    const badge = document.createElement('span')
-    badge.className = 'zd-badge'
-    badge.hidden = true
-    this.badgeEl = badge
-    group.appendChild(badge)
+    // The resource badge only exists when the picker actually has resources —
+    // a plain date / datetime picker has nothing to show there.
+    if (this.hasResources) {
+      const badge = document.createElement('span')
+      badge.className = 'zd-badge'
+      badge.hidden = true
+      this.badgeEl = badge
+      group.appendChild(badge)
+    }
 
     if (this.options.name) {
       const hidden = document.createElement('input')
