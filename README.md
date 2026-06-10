@@ -51,11 +51,14 @@ new DatePicker(el, { mode: 'datetime' }).render()  // date + time
 new DatePicker(el, { mode: 'time', step: 5 }).render()
 ```
 
-## Time steps
+## Time
 
-`step` is the minute granularity of the time field and its suggestion list
-(`<datalist>`). Typed times snap to the nearest step unless `snap: false`.
-`minTime` / `maxTime` bound the field.
+The time is picked with two sliders (hour + minute), air-datepicker style, with
+the value shown live above them. `step` is the minute granularity — the minute
+slider snaps to it (5 / 10 / 15 …). `minTime` / `maxTime` are the **opening
+hours**: the hour slider is clamped to them and any value past the close snaps
+back inside. Initial / programmatic values are also snapped (unless
+`snap: false`).
 
 ```js
 new DatePicker(el, {

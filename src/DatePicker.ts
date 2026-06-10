@@ -14,7 +14,6 @@ import {
   minutesToTime,
   snapMinutes,
   formatDuration,
-  slotOptions,
   monthMatrix,
   monthLabel,
   weekdayLabels,
@@ -32,8 +31,6 @@ const DEFAULT_LOCALE: Locale = {
   },
 }
 
-let uidSeq = 0
-
 /**
  * Framework-agnostic date / time / datetime picker. Construct with a host
  * element and options, then `render()`. Exposes an imperative surface
@@ -46,7 +43,6 @@ export class DatePicker {
   /** The generated text input; null in inline mode. */
   inputEl: HTMLInputElement | null = null
 
-  private readonly uid: number
   private readonly tz?: string
 
   /** Month currently shown in the grid. */
@@ -66,12 +62,12 @@ export class DatePicker {
   private hiddenEl: HTMLInputElement | null = null
   private popupEl: HTMLElement | null = null
   private bodyEl: HTMLElement | null = null
+  private okEl: HTMLButtonElement | null = null
   private onDocPointer = (e: Event) => this.handleOutside(e)
 
   constructor(el: HTMLElement, options: DatePickerOptions = {}) {
     this.el = el
     this.options = options
-    this.uid = ++uidSeq
     this.tz = options.timezone
 
     const init = options.value ? toTz(options.value, this.tz) : null
@@ -365,38 +361,93 @@ export class DatePicker {
     return btn
   }
 
+  /** Resolved time bounds (opening hours) in minutes from midnight. */
+  private timeBounds(): { min: number; max: number } {
+    return {
+      min: timeToMinutes(this.options.minTime ?? '00:00'),
+      max: timeToMinutes(this.options.maxTime ?? '24:00'),
+    }
+  }
+
+  /** A sensible starting time: now, snapped and clamped into opening hours. */
+  private defaultTime(): string {
+    const { min, max } = this.timeBounds()
+    let mins = snapMinutes(timeToMinutes(nowTz(this.tz).format('HH:mm')), this.step)
+    mins = Math.min(Math.max(mins, min), Math.max(min, max - this.step))
+    return minutesToTime(mins)
+  }
+
   private buildTimeRow(): HTMLElement {
+    // Pre-fill a default so the sliders have a real value and OK can enable.
+    if (this.selTime == null) this.selTime = this.defaultTime()
+
+    const { min, max } = this.timeBounds()
+    const cur = timeToMinutes(this.selTime)
+
     const row = document.createElement('div')
     row.className = 'zd-time-row'
 
-    const label = document.createElement('label')
+    const head = document.createElement('div')
+    head.className = 'zd-time-head'
+    const label = document.createElement('span')
     label.className = 'zd-time-label'
     label.textContent = this.locale.labels?.time ?? 'Time'
-    const listId = `zd-times-${this.uid}`
-    label.htmlFor = `${listId}-input`
+    const display = document.createElement('span')
+    display.className = 'zd-time-display'
+    display.textContent = this.selTime
+    head.append(label, display)
+    row.appendChild(head)
 
-    const input = document.createElement('input')
-    input.type = 'text'
-    input.className = 'zd-time'
-    input.id = `${listId}-input`
-    input.setAttribute('list', listId)
-    input.placeholder = 'HH:mm'
-    input.value = this.selTime ?? ''
-    input.addEventListener('change', () => this.pickTime(input.value))
-    input.addEventListener('blur', () => {
-      input.value = this.selTime ?? ''
-    })
+    // air-datepicker-style sliders: one for the hour, one for the minute. The
+    // hour range is clamped to opening hours; the minute snaps to `step`.
+    const hourMin = Math.floor(min / 60)
+    const hourMax = Math.min(23, Math.floor(max / 60))
+    const hours = this.timeSlider('zd-time-hours', hourMin, hourMax, 1, Math.floor(cur / 60))
+    const minutes = this.timeSlider('zd-time-minutes', 0, 59, this.step, cur % 60)
 
-    const datalist = document.createElement('datalist')
-    datalist.id = listId
-    for (const t of slotOptions(this.options.minTime, this.options.maxTime, this.step)) {
-      const opt = document.createElement('option')
-      opt.value = t
-      datalist.appendChild(opt)
-    }
+    const apply = () => this.applyTimeSliders(hours, minutes, display)
+    hours.addEventListener('input', apply)
+    minutes.addEventListener('input', apply)
 
-    row.append(label, input, datalist)
+    row.append(
+      this.sliderRow('H', hours),
+      this.sliderRow('M', minutes),
+    )
     return row
+  }
+
+  private timeSlider(cls: string, min: number, max: number, step: number, value: number): HTMLInputElement {
+    const s = document.createElement('input')
+    s.type = 'range'
+    s.className = `zd-time-slider ${cls}`
+    s.min = String(min)
+    s.max = String(max)
+    s.step = String(step)
+    s.value = String(Math.min(Math.max(value, min), max))
+    return s
+  }
+
+  private sliderRow(tag: string, slider: HTMLInputElement): HTMLElement {
+    const wrap = document.createElement('label')
+    wrap.className = 'zd-time-slider-row'
+    const t = document.createElement('span')
+    t.className = 'zd-time-slider-tag'
+    t.textContent = tag
+    wrap.append(t, slider)
+    return wrap
+  }
+
+  /** Combine the two sliders into a clamped, snapped time and reflect it back. */
+  private applyTimeSliders(hours: HTMLInputElement, minutes: HTMLInputElement, display: HTMLElement): void {
+    const { min, max } = this.timeBounds()
+    let mins = snapMinutes(Number(hours.value) * 60 + Number(minutes.value), this.step)
+    mins = Math.min(Math.max(mins, min), max)
+    this.selTime = minutesToTime(mins)
+    // Reflect any clamping back onto the sliders so they can't drift past bounds.
+    hours.value = String(Math.floor(mins / 60))
+    minutes.value = String(mins % 60)
+    display.textContent = this.selTime
+    this.updateOkState()
   }
 
   private buildResourceList(): HTMLElement {
@@ -479,6 +530,7 @@ export class DatePicker {
 
     // When resources are required the commit happens through a resource row;
     // otherwise an explicit OK button commits the current date/time selection.
+    this.okEl = null
     if (!this.options.resourceRequired) {
       const ok = document.createElement('button')
       ok.type = 'button'
@@ -486,9 +538,15 @@ export class DatePicker {
       ok.textContent = this.locale.buttons?.ok ?? 'OK'
       ok.disabled = !this.canCommit()
       ok.addEventListener('click', () => this.commit(this.selResource))
+      this.okEl = ok
       footer.appendChild(ok)
     }
     return footer
+  }
+
+  /** Toggle the OK button's enabled state without re-rendering the sliders. */
+  private updateOkState(): void {
+    if (this.okEl) this.okEl.disabled = !this.canCommit()
   }
 
   private navButton(text: string, cls: string, onClick: () => void): HTMLButtonElement {
@@ -521,12 +579,6 @@ export class DatePicker {
       this.commit(null)
       return
     }
-    this.renderBody()
-  }
-
-  private pickTime(raw: string): void {
-    const norm = this.normalizeTime(raw)
-    this.selTime = norm
     this.renderBody()
   }
 

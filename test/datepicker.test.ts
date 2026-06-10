@@ -10,6 +10,17 @@ function mount() {
   return el
 }
 
+/** Drive the hour/minute sliders to a 'HH:mm' time. */
+function setTime(el: HTMLElement, t: string) {
+  const [h, m] = t.split(':')
+  const hours = el.querySelector<HTMLInputElement>('.zd-time-hours')!
+  const minutes = el.querySelector<HTMLInputElement>('.zd-time-minutes')!
+  hours.value = String(Number(h))
+  hours.dispatchEvent(new Event('input'))
+  minutes.value = String(Number(m))
+  minutes.dispatchEvent(new Event('input'))
+}
+
 beforeEach(() => {
   document.body.innerHTML = ''
 })
@@ -77,9 +88,7 @@ describe('datetime mode', () => {
     dp.open()
 
     el.querySelector<HTMLButtonElement>('.zd-day[data-date="2026-06-05"]')!.click()
-    const time = el.querySelector<HTMLInputElement>('.zd-time')!
-    time.value = '14:00'
-    time.dispatchEvent(new Event('change'))
+    setTime(el, '14:00')
 
     el.querySelector<HTMLButtonElement>('.zd-ok')!.click()
 
@@ -88,30 +97,48 @@ describe('datetime mode', () => {
     expect(info!.iso).not.toBeNull()
   })
 
-  it('snaps a typed time to the step', () => {
+  it('snaps slider minutes to the step and clamps to opening hours', () => {
     const el = mount()
     let info: ChangeInfo | null = null
     const dp = new DatePicker(el, {
       mode: 'datetime',
       timezone: TZ,
       step: 15,
+      minTime: '07:00',
+      maxTime: '17:00',
       value: '2026-06-05',
       onChange: (i) => (info = i),
     }).render()
     dp.open()
-    const time = el.querySelector<HTMLInputElement>('.zd-time')!
-    time.value = '14:07'
-    time.dispatchEvent(new Event('change'))
+    // 14:07 → snapped to the 15-min step → 14:00
+    setTime(el, '14:07')
+    expect(el.querySelector<HTMLElement>('.zd-time-display')!.textContent).toBe('14:00')
+    // 18:30 is past the 17:00 close → clamped to 17:00
+    setTime(el, '18:30')
+    expect(el.querySelector<HTMLElement>('.zd-time-display')!.textContent).toBe('17:00')
     el.querySelector<HTMLButtonElement>('.zd-ok')!.click()
-    expect(info!.time).toBe('14:00')
+    expect(info!.time).toBe('17:00')
   })
 
-  it('cannot commit before both date and time are set', () => {
+  it('defaults the time to a value so OK can commit once a day is chosen', () => {
+    const el = mount()
+    const dp = new DatePicker(el, {
+      mode: 'datetime',
+      timezone: TZ,
+      value: '2026-06-05',
+    }).render()
+    dp.open()
+    // sliders pre-fill a default time, so OK is enabled with a day selected
+    expect(el.querySelector<HTMLButtonElement>('.zd-ok')!.disabled).toBe(false)
+    expect(el.querySelector<HTMLElement>('.zd-time-display')!.textContent).toMatch(/^\d{2}:\d{2}$/)
+  })
+
+  it('cannot commit before a day is set', () => {
     const el = mount()
     const dp = new DatePicker(el, { mode: 'datetime', timezone: TZ }).render()
     dp.open()
-    const ok = el.querySelector<HTMLButtonElement>('.zd-ok')!
-    expect(ok.disabled).toBe(true)
+    // no day chosen yet → OK disabled even though the time has a default
+    expect(el.querySelector<HTMLButtonElement>('.zd-ok')!.disabled).toBe(true)
   })
 })
 
@@ -162,9 +189,7 @@ describe('resource mode', () => {
     expect(rows[0].classList.contains('zd-resource--insufficient')).toBe(false)
     expect(rows[1].classList.contains('zd-resource--insufficient')).toBe(true)
 
-    const time = el.querySelector<HTMLInputElement>('.zd-time')!
-    time.value = '14:00'
-    time.dispatchEvent(new Event('change'))
+    setTime(el, '14:00')
 
     // choose Preben — insufficient
     rows[1].querySelector<HTMLButtonElement>('.zd-resource-choose')!.click()
