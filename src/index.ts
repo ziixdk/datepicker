@@ -1,6 +1,7 @@
 import './styles.css'
 
 export { DatePicker } from './DatePicker'
+export { locales, resolveLocale } from './locales'
 
 export {
   toTz,

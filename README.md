@@ -134,22 +134,44 @@ interface ChangeInfo {
 
 ## Localisation & timezone
 
-Month and weekday names come from `Intl` using the locale code. Everything the
-picker writes itself is overridable. Times are read and written as wall-clock
-time in `timezone`, so server values like `2026-06-05T14:00:00` land at 14:00 in
-the shop regardless of the browser timezone.
+Month and weekday names always come from `Intl` using the locale code, so they
+are localised for free. The few short strings the picker writes itself (Clear,
+OK, Free:, Choose, Time, …) ship as built-in translations.
+
+Pass a **language code** to use a built-in translation — regional codes fall
+back to the base language (`da-DK` → `da`):
+
+```js
+new DatePicker(el, { locale: 'da' }).render()
+```
+
+Built-in languages (the 15 the ziix DMS ships):
+
+`en` `da` `sv` `nb` `nl` `de` `fr` `pl` `fi` `is` `lv` `et` `kl` `es` `it`
+
+Or pass a **`Locale` object** to override any string (or add a language):
 
 ```js
 new DatePicker(el, {
-  timezone: 'Europe/Copenhagen',
   locale: {
     code: 'da',
     firstDay: 1,
-    buttons: { clear: 'Ryd', ok: 'OK' },
+    buttons: { clear: 'Nulstil', ok: 'OK' },
     labels: { free: 'Fri:', choose: 'Vælg', time: 'Tid', noResources: 'Ingen ledige' },
   },
 }).render()
 ```
+
+The locale map is also exported, so you can read or extend it:
+
+```js
+import { locales, resolveLocale } from '@ziix/datepicker'
+locales.da.labels.choose // 'Vælg'
+```
+
+**Timezone** — times are read and written as wall-clock time in `timezone`, so
+server values like `2026-06-05T14:00:00` land at 14:00 in the shop regardless of
+the browser timezone.
 
 ## Imperative API
 
@@ -196,6 +218,28 @@ npm test           # vitest
 npm run typecheck
 npm run build      # dist/ (ESM + d.ts + css)
 ```
+
+## Changelog
+
+This project follows [semantic versioning](https://semver.org). Newest first.
+
+### 0.1.0 — 2026-06-10
+
+Initial release.
+
+- **Modes**: `date`, `datetime`, `time`.
+- **Time sliders**: air-datepicker-style hour + minute sliders with a live value
+  display; minute snaps to `step` (5 / 10 / 15 …), hour clamps to the opening
+  hours (`minTime` / `maxTime`).
+- **Resources**: source from an array, a URL (`?date=YYYY-MM-DD`), or a function;
+  shows each resource's `freeMinutes`, flags resources below `requiredMinutes`,
+  and renders the chosen resource as an input-group badge.
+- **15 built-in locales** (`en da sv nb nl de fr pl fi is lv et kl es it`) plus
+  full `Locale`-object override; month/weekday names via `Intl`.
+- **Timezone-correct** wall-clock parsing (dayjs utc/timezone).
+- **Themeable** via `--zd-*` CSS custom properties.
+- **Imperative API**: `render` · `open` · `close` · `getValue` · `setValue` ·
+  `clear` · `refetchResources` · `destroy`; `inline` and hidden-`name` support.
 
 ## License
 

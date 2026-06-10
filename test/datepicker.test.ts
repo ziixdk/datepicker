@@ -248,6 +248,34 @@ describe('clear and setValue', () => {
   })
 })
 
+describe('built-in locales', () => {
+  it('resolves a language code to translated labels', () => {
+    const el = mount()
+    const dp = new DatePicker(el, { mode: 'datetime', timezone: TZ, locale: 'da', resources: [] }).render()
+    dp.open()
+    expect(el.querySelector('.zd-clear')!.textContent).toBe('Ryd')
+    expect(el.querySelector('.zd-time-label')!.textContent).toBe('Tid')
+  })
+
+  it('falls back from a regional code to the base language', () => {
+    const el = mount()
+    const dp = new DatePicker(el, { mode: 'date', timezone: TZ, locale: 'de-DE' }).render()
+    dp.open()
+    expect(el.querySelector('.zd-clear')!.textContent).toBe('Löschen')
+  })
+
+  it('lets an explicit Locale object override a built-in string', () => {
+    const el = mount()
+    const dp = new DatePicker(el, {
+      mode: 'date',
+      timezone: TZ,
+      locale: { code: 'da', buttons: { clear: 'Nulstil' } },
+    }).render()
+    dp.open()
+    expect(el.querySelector('.zd-clear')!.textContent).toBe('Nulstil')
+  })
+})
+
 describe('inline mode', () => {
   it('renders the popup inline with no input', () => {
     const el = mount()

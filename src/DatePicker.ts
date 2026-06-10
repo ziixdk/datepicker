@@ -18,6 +18,7 @@ import {
   monthLabel,
   weekdayLabels,
 } from './datelib'
+import { resolveLocale } from './locales'
 
 const DEFAULT_LOCALE: Locale = {
   code: 'en',
@@ -101,12 +102,13 @@ export class DatePicker {
     const l = this.options.locale
     const base = DEFAULT_LOCALE
     if (!l) return base
-    if (typeof l === 'string') return { ...base, code: l }
+    // A string resolves to a built-in translation (e.g. 'da' → Danish labels).
+    const src = typeof l === 'string' ? resolveLocale(l) : l
     return {
       ...base,
-      ...l,
-      buttons: { ...base.buttons, ...l.buttons },
-      labels: { ...base.labels, ...l.labels },
+      ...src,
+      buttons: { ...base.buttons, ...src.buttons },
+      labels: { ...base.labels, ...src.labels },
     }
   }
 

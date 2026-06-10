@@ -84,12 +84,7 @@
       import { DatePicker } from '../src/index.ts'
 
       const TZ = 'Europe/Copenhagen'
-      const da = {
-        code: 'da',
-        firstDay: 1,
-        buttons: { clear: 'Ryd', ok: 'OK', prev: '‹', next: '›' },
-        labels: { free: 'Fri:', choose: 'Vælg', time: 'Tid', noResources: 'Ingen ledige', loading: 'Henter…' },
-      }
+      const da = 'da' // built-in Danish translations; pass a Locale object to override
       const show = (id, info) => {
         document.getElementById(id).textContent = JSON.stringify(
           {
