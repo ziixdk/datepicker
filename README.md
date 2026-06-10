@@ -243,4 +243,8 @@ Initial release.
 
 ## License
 
-MIT © ziix
+MIT © [ziix](https://ziix.eu/en)
+
+---
+
+Built by [ziix](https://ziix.eu/en) · [npm](https://www.npmjs.com/package/@ziix/datepicker)
