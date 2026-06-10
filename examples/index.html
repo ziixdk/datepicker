@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="da">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>@ziix/datepicker — playground</title>
+    <style>
+      body {
+        margin: 0;
+        font-family: system-ui, sans-serif;
+        background: #fafafa;
+        color: #1a1a1a;
+        padding: 2rem;
+      }
+      main {
+        max-width: 720px;
+        margin: 0 auto;
+      }
+      h1 {
+        font-size: 1.25rem;
+      }
+      .demo {
+        background: #fff;
+        border: 1px solid #e2e2e2;
+        border-radius: 10px;
+        padding: 1.25rem 1.5rem;
+        margin-bottom: 1.5rem;
+      }
+      .demo h2 {
+        font-size: 1rem;
+        margin: 0 0 0.75rem;
+      }
+      .demo p {
+        margin: 0 0 1rem;
+        color: #6b7280;
+        font-size: 0.875rem;
+      }
+      .out {
+        margin-top: 1rem;
+        font-family: ui-monospace, monospace;
+        font-size: 0.8125rem;
+        color: #374151;
+        background: #f6f6f6;
+        border-radius: 6px;
+        padding: 0.5rem 0.75rem;
+        white-space: pre-wrap;
+        min-height: 1.2rem;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>@ziix/datepicker</h1>
+
+      <!-- 1) Kun dato -->
+      <section class="demo">
+        <h2>1 · Kun dato</h2>
+        <p>Vælg en dag — committer med det samme.</p>
+        <div id="pick-date"></div>
+        <div class="out" id="out-date">—</div>
+      </section>
+
+      <!-- 2) Dato + tid -->
+      <section class="demo">
+        <h2>2 · Dato + tid</h2>
+        <p>Vælg dag og tid (15-minutters interval), bekræft med OK.</p>
+        <div id="pick-datetime"></div>
+        <div class="out" id="out-datetime">—</div>
+      </section>
+
+      <!-- 3) Dato + tid + ressource -->
+      <section class="demo">
+        <h2>3 · Dato + tid + ressource</h2>
+        <p>
+          Vælg indleveringsdato, tid (5-min interval) og hvilken ressource opgaven lander på.
+          Opgaven kræver <strong>3:00</strong> — ressourcer med mindre fri tid markeres rødt.
+        </p>
+        <div id="pick-resource"></div>
+        <div class="out" id="out-resource">—</div>
+      </section>
+    </main>
+
+    <script type="module">
+      import { DatePicker } from '../src/index.ts'
+
+      const TZ = 'Europe/Copenhagen'
+      const da = {
+        code: 'da',
+        firstDay: 1,
+        buttons: { clear: 'Ryd', ok: 'OK', prev: '‹', next: '›' },
+        labels: { free: 'Fri:', choose: 'Vælg', time: 'Tid', noResources: 'Ingen ledige', loading: 'Henter…' },
+      }
+      const show = (id, info) => {
+        document.getElementById(id).textContent = JSON.stringify(
+          {
+            value: info.value,
+            iso: info.iso,
+            time: info.time,
+            resource: info.resource ? info.resource.title : null,
+            sufficient: info.sufficient,
+          },
+          null,
+          2,
+        )
+      }
+
+      // 1) Kun dato
+      new DatePicker(document.getElementById('pick-date'), {
+        mode: 'date',
+        timezone: TZ,
+        locale: da,
+        placeholder: 'Vælg dato',
+        onChange: (info) => show('out-date', info),
+      }).render()
+
+      // 2) Dato + tid
+      new DatePicker(document.getElementById('pick-datetime'), {
+        mode: 'datetime',
+        timezone: TZ,
+        locale: da,
+        step: 15,
+        minTime: '07:00',
+        maxTime: '18:00',
+        placeholder: 'Vælg dato og tid',
+        onChange: (info) => show('out-datetime', info),
+      }).render()
+
+      // 3) Dato + tid + ressource
+      // Simulerer backend: GET ?date=YYYY-MM-DD → fri tid pr. ressource (varierer pr. ugedag).
+      const fakeResources = (date) => {
+        const seed = date.date()
+        return [
+          { id: 1, title: 'Torben', freeMinutes: 480 - (seed % 3) * 60 },
+          { id: 2, title: 'Preben', freeMinutes: 120 + (seed % 2) * 30 },
+          { id: 3, title: 'Mette', freeMinutes: 300, color: '#16a34a' },
+        ]
+      }
+
+      new DatePicker(document.getElementById('pick-resource'), {
+        mode: 'datetime',
+        timezone: TZ,
+        locale: da,
+        step: 5,
+        minTime: '07:00',
+        maxTime: '17:00',
+        requiredMinutes: 180, // 3 timer fra sales-lines
+        resources: fakeResources, // i DMS: resourceUrl-string, fx '/api/delivery-resources'
+        placeholder: 'Vælg indlevering',
+        onChange: (info) => show('out-resource', info),
+      }).render()
+    </script>
+  </body>
+</html>
