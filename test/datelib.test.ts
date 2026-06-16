@@ -92,4 +92,22 @@ describe('toTz', () => {
     const d = toTz('2026-06-05T14:00:00', 'Europe/Copenhagen')
     expect(d.format('YYYY-MM-DD HH:mm')).toBe('2026-06-05 14:00')
   })
+
+  it('resolves a bare HH:mm time without throwing (anchored to today)', () => {
+    // dayjs.tz('08:00', tz) throws RangeError: Invalid time value — a bare time
+    // is not a parseable date. The picker passes opening-hours values like this.
+    expect(() => toTz('08:00', 'Europe/Copenhagen')).not.toThrow()
+    const d = toTz('08:00', 'Europe/Copenhagen')
+    expect(d.isValid()).toBe(true)
+    expect(d.format('HH:mm')).toBe('08:00')
+  })
+
+  it('accepts HH:mm:ss too', () => {
+    expect(toTz('16:30:00', 'Europe/Copenhagen').format('HH:mm')).toBe('16:30')
+  })
+
+  it('returns an invalid dayjs (never throws) for an unparseable string', () => {
+    expect(() => toTz('not-a-date', 'Europe/Copenhagen')).not.toThrow()
+    expect(toTz('not-a-date', 'Europe/Copenhagen').isValid()).toBe(false)
+  })
 })
