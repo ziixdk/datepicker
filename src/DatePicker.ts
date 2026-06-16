@@ -192,6 +192,22 @@ export class DatePicker {
     if (this.isOpen) this.renderBody()
   }
 
+  /**
+   * Select a resource by id programmatically (pass null to clear). The id must
+   * exist in the currently loaded list; unknown ids are ignored. Does not fire
+   * onChange.
+   */
+  setResource(id: string | number | null): void {
+    if (id == null) {
+      this.selResource = null
+    } else {
+      const found = this.resources.find((r) => r.id === String(id))
+      if (found) this.selResource = found
+    }
+    this.syncInput()
+    if (this.isOpen) this.renderBody()
+  }
+
   /** The current committed value as a ChangeInfo snapshot. */
   getValue(): ChangeInfo {
     return this.buildChangeInfo()
@@ -690,9 +706,24 @@ export class DatePicker {
       title: input.title ?? String(input.id),
       freeMinutes: typeof input.freeMinutes === 'number' ? input.freeMinutes : null,
       color: input.color,
+      isDefault: input.default === true,
       extendedProps: input.extendedProps ?? {},
       raw: input,
     }
+  }
+
+  /**
+   * Pre-select the default resource once a list has loaded, unless the user has
+   * already chosen one. `resourceId` (host default) wins over a source-flagged
+   * `default: true`.
+   */
+  private applyDefaultResource(): void {
+    if (this.selResource) return
+    const byId = this.options.resourceId != null
+      ? this.resources.find((r) => r.id === String(this.options.resourceId))
+      : undefined
+    const pick = byId ?? this.resources.find((r) => r.isDefault)
+    if (pick) this.selResource = pick
   }
 
   private async loadResources(): Promise<void> {
@@ -721,6 +752,7 @@ export class DatePicker {
     // A newer load (or a clear) superseded this one — drop the stale result.
     if (token !== this.resourceToken) return
     this.resources = raw.map((r) => this.normalizeResource(r))
+    this.applyDefaultResource()
     this.resourcesLoading = false
     if (this.isOpen) this.renderBody()
   }

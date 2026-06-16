@@ -1,6 +1,6 @@
 {
   "name": "@ziix/datepicker",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Framework-agnostic date / time / datetime picker with configurable minute steps and resource-aware selection — fetch bookable resources from a URL, show free time per resource and pick the one a task lands on.",
   "type": "module",
   "license": "MIT",

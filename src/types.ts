@@ -15,6 +15,12 @@ export interface ResourceInput {
   freeMinutes?: number
   /** Accent colour for the resource badge (any CSS colour). */
   color?: string
+  /**
+   * Marks this resource as the default selection. When the source returns one,
+   * the picker pre-selects it after a day is chosen (unless the `resourceId`
+   * option names a different one). Lets the API drive the default.
+   */
+  default?: boolean
   /** Arbitrary domain data forwarded to renderResource and callbacks. */
   extendedProps?: Record<string, unknown>
   [key: string]: unknown
@@ -27,6 +33,8 @@ export interface CalResource {
   /** Free minutes on the selected day, or null when the backend omitted it. */
   freeMinutes: number | null
   color?: string
+  /** True when the source flagged this resource as the default selection. */
+  isDefault: boolean
   extendedProps: Record<string, unknown>
   /** The original, untouched input. */
   raw: ResourceInput
@@ -120,6 +128,12 @@ export interface DatePickerOptions {
 
   /** Resource source. When set, a resource list is shown after a day is picked. */
   resources?: ResourceSource
+  /**
+   * Pre-select the resource with this id once the resource list has loaded for
+   * the selected day — the host-set default. Takes precedence over a resource
+   * the source flags with `default: true`. The user can still pick another.
+   */
+  resourceId?: string | number
   /**
    * Task duration in minutes (e.g. summed work hours from sales lines). Resources
    * whose `freeMinutes` is below this are flagged as insufficient.

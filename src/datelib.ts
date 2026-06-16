@@ -16,8 +16,19 @@ dayjs.extend(timezone)
  */
 export function toTz(value: string | Date | Dayjs, tz?: string): Dayjs {
   if (!tz) return dayjs(value)
-  if (typeof value === 'string' && !/([zZ])$|[+-]\d{2}:?\d{2}$/.test(value)) {
-    return dayjs.tz(value, tz)
+  if (typeof value === 'string') {
+    // A bare 'HH:mm[:ss]' time isn't a date dayjs.tz() can parse — it throws
+    // (RangeError: Invalid time value). Anchor it to today in `tz` so time-only
+    // values (e.g. opening hours) resolve to that wall-clock time.
+    if (/^\d{1,2}:\d{2}(:\d{2})?$/.test(value)) {
+      return dayjs.tz(`${dayjs().tz(tz).format('YYYY-MM-DD')}T${value}`, tz)
+    }
+    if (!/([zZ])$|[+-]\d{2}:?\d{2}$/.test(value)) {
+      // dayjs.tz() also throws on any other unparseable string; only call it once
+      // we know the value parses, so callers' isValid() guards handle bad input
+      // instead of the constructor crashing.
+      return dayjs(value).isValid() ? dayjs.tz(value, tz) : dayjs(value)
+    }
   }
   return dayjs(value).tz(tz)
 }
